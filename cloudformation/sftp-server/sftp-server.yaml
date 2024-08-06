@@ -35,10 +35,6 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: '*'
-      Tags:
-        - Key: ownera
-          Value: test
-
 Outputs:
   SFTPServerEndpoint:
     Description: 'The endpoint of the SFTP server.'
