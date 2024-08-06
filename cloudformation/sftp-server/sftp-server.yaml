@@ -35,8 +35,11 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: '*'
+      Tags:
+        - Key: ownera
+          Value: test
 
 Outputs:
   SFTPServerEndpoint:
-    Description: 'The endpoint of the SFTP server'
+    Description: 'The endpoint of the SFTP server.'
     Value: !Sub 's-${MySFTPServer}.server.transfer.us-east-1.amazonaws.com'
