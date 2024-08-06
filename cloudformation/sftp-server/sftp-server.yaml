@@ -35,6 +35,9 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: '*'
+      tags:
+        - Key: test
+          Value: test
 
 Outputs:
   SFTPServerEndpoint:
