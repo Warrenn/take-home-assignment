@@ -103,6 +103,12 @@ Resources:
                 - "cloudformation:ListChangeSets"
                 - "cloudformation:ListStacks"
                 - "cloudformation:ValidateTemplate"
+                - "iam:UntagRole"
+                - "iam:TagRole"
+                - "iam:CreateRole"
+                - "iam:DeleteRole"
+                - "iam:AttachRolePolicy"
+                - "iam:DetachRolePolicy"
               Resource: "*"
 
             - Sid: "PolicyForManagedRules"
