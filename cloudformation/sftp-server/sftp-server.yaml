@@ -35,8 +35,8 @@ Resources:
                   - 'logs:CreateLogStream'
                   - 'logs:PutLogEvents'
                 Resource: '*'
-      tags:
-        - Key: test
+      Tags:
+        - Key: ownera
           Value: test
 
 Outputs:
