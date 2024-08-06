@@ -4,10 +4,10 @@ param (
     [String]
     $region = "eu-west-1",
     [String]
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     $templateFile,
     [String]
-    [Parameter(Mandatory=$true)]
+    [Parameter(Mandatory = $true)]
     $stackName
 )
 
@@ -19,6 +19,9 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
     $awsProfile = "default"
 }
 
+$owner = "warrenne@gmail.com"
+$product = "tha-warrenn-enslin"
+
 # Function to deploy a new stack
 function DeployNewStack {
     Write-Output "Deploying new stack..."
@@ -27,7 +30,11 @@ function DeployNewStack {
         --stack-name $stackName `
         --profile $awsProfile `
         --region $region `
-        --capabilities CAPABILITY_NAMED_IAM
+        --tags `
+            owner=$owner `
+            product=$product `
+        --capabilities CAPABILITY_NAMED_IAM `
+        --output json
 }
 
 # Function to update an existing stack
@@ -37,6 +44,7 @@ function UpdateStack {
         --stack-name $stackName `
         --template-body file://$templateFile `
         --region $region `
+        --tags "[{""Key"":""owner"",""Value"":""$owner""},{""Key"":""product"",""Value"":""$product""}]" `
         --capabilities CAPABILITY_NAMED_IAM `
         --output json
 }
@@ -57,8 +65,8 @@ $status = aws cloudformation describe-stacks `
     --query "Stacks[0].StackStatus" `
     --output text
 
-    write-output "Stack status: $status"
-write-output $status
+write-output "Stack status: $status"
+
 if ($status -eq "NotFoundException" -or [System.String]::IsNullOrEmpty($status)) {
     # Stack does not exist, deploy new stack
     DeployNewStack

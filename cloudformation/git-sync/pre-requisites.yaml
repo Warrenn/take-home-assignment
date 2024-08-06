@@ -24,7 +24,7 @@ Parameters:
   ConfigFile:
     Type: String
     Description: "The path of the config file"
-    Default: "cloudformation/sftp-server/sftp-server.yaml"
+    Default: "cloudformation/sftp-server/sftp-server.config"
   
   StackName:
     Type: String
@@ -41,7 +41,7 @@ Resources:
       Tags:
         - Key: owner
           Value: !Ref Owner
-        - Key: Product
+        - Key: product
           Value: !Ref Product
 
   RepositoryLink:
@@ -53,7 +53,7 @@ Resources:
       Tags:
         - Key: owner
           Value: !Ref Owner
-        - Key: Product
+        - Key: product
           Value: !Ref Product
 
   SyncConfiguration:
@@ -118,7 +118,7 @@ Resources:
       Tags:
         - Key: owner
           Value: !Ref Owner
-        - Key: Product
+        - Key: product
           Value: !Ref Product
 Outputs:
   GitHubConnectionArn:
