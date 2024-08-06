@@ -109,6 +109,7 @@ Resources:
                 - "iam:DeleteRole"
                 - "iam:AttachRolePolicy"
                 - "iam:DetachRolePolicy"
+                - "iam:GetRole"
               Resource: "*"
 
             - Sid: "PolicyForManagedRules"
@@ -133,5 +134,5 @@ Resources:
           Value: !Ref Product
 Outputs:
   GitHubConnectionArn:
-    Description: 'The ARN of the GitHub connection.'
+    Description: 'The ARN of the GitHub connection'
     Value: !GetAtt GitHubConnection.ConnectionArn
