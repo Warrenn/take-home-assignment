@@ -1,10 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
   # Define the S3 bucket where files will be stored
-  MyS3Bucket:
-    Type: 'AWS::S3::Bucket'
-    Properties:
-      BucketName: 'my-s3-bucket'
 
   # Define the Transfer Family SFTP server
   MySFTPServer:
@@ -40,54 +36,7 @@ Resources:
                   - 'logs:PutLogEvents'
                 Resource: '*'
 
-  # Define the SFTP user
-  MySFTPUser:
-    Type: 'AWS::Transfer::User'
-    Properties:
-      UserName: 'my-sftp-user'
-      ServerId: !Ref MySFTPServer
-      Role: !GetAtt TransferUserRole.Arn
-      HomeDirectory: !Sub '/${MyS3Bucket}/user-home'
-      HomeDirectoryType: 'LOGICAL'
-      HomeDirectoryMappings:
-        - Entry: '/'
-          Target: !Sub 'arn:aws:s3:::${MyS3Bucket}/user-home'
-
-  # Define the IAM Role for the SFTP user
-  TransferUserRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service: 'transfer.amazonaws.com'
-            Action: 'sts:AssumeRole'
-      Path: '/'
-      RoleName: 'TransferUserRole'
-      Policies:
-        - PolicyName: 'TransferUserPolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 's3:ListBucket'
-                Resource: !Sub 'arn:aws:s3:::${MyS3Bucket}'
-              - Effect: 'Allow'
-                Action:
-                  - 's3:GetObject'
-                  - 's3:PutObject'
-                Resource: !Sub 'arn:aws:s3:::${MyS3Bucket}/user-home/*'
-
 Outputs:
   SFTPServerEndpoint:
     Description: 'The endpoint of the SFTP server.'
     Value: !Sub 's-${MySFTPServer}.server.transfer.us-east-1.amazonaws.com'
-  SFTPUserName:
-    Description: 'The username for SFTP access.'
-    Value: !Ref MySFTPUser
-  S3BucketName:
-    Description: 'The name of the S3 bucket where files will be stored.'
-    Value: !Ref MyS3Bucket

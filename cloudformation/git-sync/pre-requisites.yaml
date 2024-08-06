@@ -3,8 +3,13 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   Owner:
     Type: String
-    Description: "The owner of the resources"
+    Description: "The owner of the resources used for tagging"
     Default: "warrenne@gmail.com"
+  
+  GitHubOwner:
+    Type: String
+    Description: "The owner of the GitHub repository used for syncing"
+    Default: "Warrenn"
 
   Product:
     Type: String
@@ -24,7 +29,7 @@ Parameters:
   ConfigFile:
     Type: String
     Description: "The path of the config file"
-    Default: "cloudformation/sftp-server/sftp-server.config"
+    Default: "cloudformation/sftp-server/sftp-server-config.yaml"
   
   StackName:
     Type: String
@@ -48,7 +53,7 @@ Resources:
     Type: AWS::CodeStarConnections::RepositoryLink
     Properties:
       ConnectionArn: !GetAtt GitHubConnection.ConnectionArn
-      OwnerId: !Ref "AWS::AccountId"
+      OwnerId: !Ref GitHubOwner
       RepositoryName: !Ref RepositoryName
       Tags:
         - Key: owner
