@@ -95,6 +95,14 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
+        - PolicyName: 'useConnection'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: 'Allow'
+                Action: 
+                  - 'codestar-connections:UseConnection'
+                Resource: !GetAtt GitHubConnection.ConnectionArn      
         - PolicyName: CodeStarConnections
           PolicyDocument:
             Version: "2012-10-17"
