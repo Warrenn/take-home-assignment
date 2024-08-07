@@ -26,7 +26,26 @@ Parameters:
     Description: "The path of the config file to monitor for changes"
     Default: "code-pipeline-stack-deployment.json"
 
+    
 Resources:
+  # S3 Bucket for storing pipeline artifacts
+  ArtifactStoreBucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: 'Delete'
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
   # Define the CodeStar Connection
   GitHubConnection:
     Type: 'AWS::CodeStarConnections::Connection'
@@ -148,6 +167,14 @@ Resources:
                   - 'cloudformation:DeleteStack'
                   - 'cloudformation:ListStacks'
                 Resource: '*'
+        - PolicyName: 'useConnection'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: 'Allow'
+                Action: 
+                  - 'codestar-connections:UseConnection'
+                Resource: !GetAtt GitHubConnection.ConnectionArn
       Tags:
         - Key: owner
           Value: !Ref Owner
@@ -179,6 +206,14 @@ Resources:
                   - 's3:GetObjectVersion'
                   - 's3:PutObject'
                 Resource: '*'
+        - PolicyName: 'useConnection'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: 'Allow'
+                Action: 
+                  - 'codestar-connections:UseConnection'
+                Resource: !GetAtt GitHubConnection.ConnectionArn
       Tags:
         - Key: owner
           Value: !Ref Owner
@@ -191,7 +226,7 @@ Resources:
       Name: 'UpdateStackProject'
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts: 
-        Type: 'NO_ARTIFACTS'
+        Type: 'CODEPIPELINE'
       Environment: 
         ComputeType: 'BUILD_GENERAL1_SMALL'
         Image: 'aws/codebuild/standard:4.0'
@@ -205,11 +240,14 @@ Resources:
         - Key: product
           Value: !Ref Product
 
-CodePipeline:
+  CodePipeline:
     Type: 'AWS::CodePipeline::Pipeline'
     Properties: 
       Name: 'UpdateStackPipeline'
       RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      ArtifactStore: 
+        Location: !Ref ArtifactStoreBucket
+        Type: 'S3'
       Stages: 
         - Name: 'Source'
           Actions: 

@@ -1,7 +1,7 @@
 {
-  "template-file-path": "/code-pipeline/code-pipeline.yaml",
+  "template-file-path": "code-pipeline/code-pipeline.yaml",
   "parameters": {
-    "GitHubOwner": "DataChefHQ",
+    "GitHubOwner": "warrenn",
     "RepositoryName": "THA_Warrenn-Enslin",
     "Branch": "main",
     "ConfigFile": "code-pipeline-stack-deployment.json",

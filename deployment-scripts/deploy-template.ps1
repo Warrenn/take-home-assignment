@@ -8,7 +8,11 @@ param (
     $templateFile,
     [String]
     [Parameter(Mandatory = $true)]
-    $stackName
+    $stackName,
+    [PSCustomObject]
+    $tags = $null,
+    [PSCustomObject]
+    $overrides = $null
 )
 
 if ([string]::IsNullOrEmpty($awsProfile)) {
@@ -19,35 +23,51 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
     $awsProfile = "default"
 }
 
-$deploymentConfig = Get-Content ./code-pipeline-stack-deployment.json | ConvertFrom-Json
-$owner = $deploymentConfig.tags.owner
-$product = $deploymentConfig.tags.product
-
 # Function to deploy a new stack
 function DeployNewStack {
     Write-Output "Deploying new stack..."
-    aws cloudformation deploy `
-        --template-file $templateFile `
-        --stack-name $stackName `
-        --profile $awsProfile `
-        --region $region `
-        --tags `
-            owner=$owner `
-            product=$product `
-        --capabilities CAPABILITY_NAMED_IAM `
-        --output json
+
+    $parameters = @(
+        "--template-file $templateFile", 
+        "--stack-name $stackName", 
+        "--profile $awsProfile",  
+        "--region $region",
+        "--capabilities CAPABILITY_NAMED_IAM",
+        "--output json")
+    
+    if ($null -ne $tags) {
+        $parameters += "--tags ```n$([string]::Join(" ```n",$($tags.PSObject.Properties | ForEach-Object { "$($_.Name)='$($_.Value)'" })))"
+    }
+
+    if ($null -ne $overrides) {
+        $parameters += "--parameter-overrides $([string]::Join(" ",$($overrides.PSObject.Properties | ForEach-Object { "$($_.Name)='$($_.Value)'" })))"
+    }
+
+    Invoke-Expression "& aws cloudformation deploy $parameters"
 }
 
 # Function to update an existing stack
 function UpdateStack {
     Write-Output "Updating stack..."
-    aws cloudformation update-stack `
-        --stack-name $stackName `
-        --template-body file://$templateFile `
-        --region $region `
-        --tags "[{""Key"":""owner"",""Value"":""$owner""},{""Key"":""product"",""Value"":""$product""}]" `
-        --capabilities CAPABILITY_NAMED_IAM `
-        --output json
+
+
+    $parameters = @(
+        "--stack-name $stackName", 
+        "--template-body file://$templateFile", 
+        "--profile $awsProfile",  
+        "--region $region",
+        "--capabilities CAPABILITY_NAMED_IAM",
+        "--output json")
+    
+    if ($null -ne $tags) {
+        $parameters += "--tags '[$([string]::Join(",",$($tags.PSObject.Properties | ForEach-Object { "{`"`"Key`"`":`"`"$($_.Name)`"`",`"`"Value`"`":`"`"$($_.Value)`"`"}" })))]'"
+    }
+
+    if ($null -ne $overrides) {
+        $parameters += "--parameters $([string]::Join(" ",$($overrides.PSObject.Properties | ForEach-Object { "ParameterKey=$($_.Name),ParameterValue=$($_.Value)" })))"
+    }
+
+    Invoke-Expression "& aws cloudformation update-stack $parameters"
 }
 
 # Function to delete a stack
@@ -55,6 +75,7 @@ function DeleteStack {
     Write-Output "Deleting stack..."
     aws cloudformation delete-stack `
         --stack-name $stackName `
+        --profile $awsProfile `
         --region $region `
         --output json
 }
@@ -63,6 +84,7 @@ function DeleteStack {
 $status = aws cloudformation describe-stacks `
     --stack-name $stackName `
     --region $region `
+    --profile $awsProfile `
     --query "Stacks[0].StackStatus" `
     --output text
 
@@ -72,7 +94,7 @@ if ($status -eq "NotFoundException" -or [System.String]::IsNullOrEmpty($status))
     # Stack does not exist, deploy new stack
     DeployNewStack
 }
-elseif ($status -eq "CREATE_FAILED" -or $status -eq "ROLLBACK_FAILED" -or $status -eq "ROLLBACK_COMPLETE" -or $status -eq "DELETE_FAILED" -or $status -eq "UPDATE_ROLLBACK_FAILED") {
+elseif ($status -eq "CREATE_FAILED" -or $status -eq "ROLLBACK_FAILED" -or $status -eq "ROLLBACK_COMPLETE" -or $status -eq "DELETE_FAILED" -or $status -eq "UPDATE_ROLLBACK_FAILED" -or $status -eq "UPDATE_FAILED") {
     # Stack is in error state, delete and redeploy
     DeleteStack
     Start-Sleep -Seconds 30 # Wait for stack to be deleted
