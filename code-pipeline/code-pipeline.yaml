@@ -24,7 +24,7 @@ Parameters:
   ConfigFile:
     Type: String
     Description: "The path of the config file to monitor for changes"
-    Default: "code-pipeline-stack-deployment.json"
+    Default: "/code-pipeline-stack-deployment.json"
 
     
 Resources:
