@@ -1,0 +1,12 @@
+{
+  "template-file-path": "/code-pipeline/code-pipeline.yaml",
+  "parameters": {
+    "GitHubOwner": "DataChefHQ",
+    "RepositoryName": "THA_Warrenn-Enslin",
+    "Branch": "main",
+    "ConfigFile": "code-pipeline-stack-deployment.json",
+    "Owner": "warrenne@gmail.com",
+    "Product": "tha-warrenn-enslin"
+  },
+  "tags": { "owner": "warrenne@gmail.com", "product": "tha-warrenn-enslin" }
+}

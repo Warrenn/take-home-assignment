@@ -1,0 +1,20 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.x
+    commands:
+      - echo Installing jq...
+      - yum install -y jq
+  pre_build:
+    commands:
+      - echo Pre-build phase...
+  build:
+    commands:
+      - echo Build phase...
+      - chmod +x ./deployment-scripts/update-stacks.sh
+      - ./deployment-scripts/update-stacks.sh
+  post_build:
+    commands:
+      - echo Post-build phase...

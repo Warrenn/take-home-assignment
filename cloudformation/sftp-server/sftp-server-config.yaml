@@ -1,7 +1,0 @@
-template-file-path: /cloudformation/sftp-server/sftp-server.yaml
-
-parameters: 
-
-tags:
-    owner: 'warrenne@gmail.com'
-    product: 'tha-warrenn-enslin'

@@ -1,0 +1,251 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  Owner:
+    Type: String
+    Description: "The owner of the resources used for tagging"
+  
+  GitHubOwner:
+    Type: String
+    Description: "The owner of the GitHub repository used for syncing"
+
+  Product:
+    Type: String
+    Description: "The product name used for tagging"
+
+  RepositoryName:
+    Type: String
+    Description: "The name of the repository"
+
+  Branch:
+    Type: String
+    Description: "The name of the branch"
+
+  ConfigFile:
+    Type: String
+    Description: "The path of the config file to monitor for changes"
+    Default: "code-pipeline-stack-deployment.json"
+
+Resources:
+  # Define the CodeStar Connection
+  GitHubConnection:
+    Type: 'AWS::CodeStarConnections::Connection'
+    Properties:
+      ConnectionName: 'GitHubConnection'  # Name for the GitHub connection
+      ProviderType: 'GitHub'  # GitHub as the provider
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+  RepositoryLink:
+    Type: AWS::CodeStarConnections::RepositoryLink
+    Properties:
+      ConnectionArn: !GetAtt GitHubConnection.ConnectionArn
+      OwnerId: !Ref GitHubOwner
+      RepositoryName: !Ref RepositoryName
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+  SyncConfiguration:
+    Type: AWS::CodeStarConnections::SyncConfiguration
+    Properties:
+      Branch: !Ref Branch
+      ConfigFile: !Ref ConfigFile
+      PublishDeploymentStatus: "ENABLED"
+      RepositoryLinkId: !GetAtt RepositoryLink.RepositoryLinkId
+      ResourceName: !Ref AWS::StackName
+      RoleArn: !GetAtt SyncRole.Arn
+      SyncType: "CFN_STACK_SYNC"
+  
+  SyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.sync.codeconnections.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: CodeStarConnections
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+            - Sid: "SyncToCloudFormation"
+              Effect: "Allow"
+              Action:
+                - "cloudformation:CreateChangeSet"
+                - "cloudformation:DeleteChangeSet"
+                - "cloudformation:DescribeChangeSet"
+                - "cloudformation:DescribeStackEvents"
+                - "cloudformation:DescribeStacks"
+                - "cloudformation:ExecuteChangeSet"
+                - "cloudformation:GetTemplate"
+                - "cloudformation:ListChangeSets"
+                - "cloudformation:ListStacks"
+                - "cloudformation:ValidateTemplate"
+                - "iam:UntagRole"
+                - "iam:TagRole"
+                - "iam:CreateRole"
+                - "iam:DeleteRole"
+                - "iam:AttachRolePolicy"
+                - "iam:DetachRolePolicy"
+                - "iam:GetRole"
+              Resource: "*"
+
+            - Sid: "PolicyForManagedRules"
+              Effect: "Allow"
+              Action:
+                - "events:PutRule"
+                - "events:PutTargets"
+              Resource: "*"
+              Condition:
+                StringEquals:
+                  events:ManagedBy:
+                    - "cloudformation.sync.codeconnections.amazonaws.com"
+
+            - Sid: "PolicyForDescribingRule"
+              Effect: "Allow"
+              Action: "events:DescribeRule"
+              Resource: "*"
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+  CodeBuildServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: 'Allow'
+            Principal: 
+              Service: 
+                - 'codebuild.amazonaws.com'
+            Action: 
+              - 'sts:AssumeRole'
+      Policies: 
+        - PolicyName: 'CodeBuildPolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: 'Allow'
+                Action: 
+                  - 'cloudformation:UpdateStack'
+                  - 'cloudformation:DescribeStacks'
+                  - 'cloudformation:CreateStack'
+                  - 'cloudformation:DeleteStack'
+                  - 'cloudformation:ListStacks'
+                Resource: '*'
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+  CodePipelineServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties: 
+      AssumeRolePolicyDocument: 
+        Version: '2012-10-17'
+        Statement: 
+          - Effect: 'Allow'
+            Principal: 
+              Service: 
+                - 'codepipeline.amazonaws.com'
+            Action: 
+              - 'sts:AssumeRole'
+      Policies: 
+        - PolicyName: 'CodePipelinePolicy'
+          PolicyDocument: 
+            Version: '2012-10-17'
+            Statement: 
+              - Effect: 'Allow'
+                Action: 
+                  - 'codebuild:StartBuild'
+                  - 'codebuild:BatchGetBuilds'
+                  - 's3:GetObject'
+                  - 's3:GetObjectVersion'
+                  - 's3:PutObject'
+                Resource: '*'
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+  CodeBuildProject:
+    Type: 'AWS::CodeBuild::Project'
+    Properties: 
+      Name: 'UpdateStackProject'
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts: 
+        Type: 'NO_ARTIFACTS'
+      Environment: 
+        ComputeType: 'BUILD_GENERAL1_SMALL'
+        Image: 'aws/codebuild/standard:4.0'
+        Type: 'LINUX_CONTAINER'
+      Source: 
+        Type: 'CODEPIPELINE'
+      TimeoutInMinutes: 10
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+CodePipeline:
+    Type: 'AWS::CodePipeline::Pipeline'
+    Properties: 
+      Name: 'UpdateStackPipeline'
+      RoleArn: !GetAtt CodePipelineServiceRole.Arn
+      Stages: 
+        - Name: 'Source'
+          Actions: 
+            - Name: 'Source'
+              ActionTypeId: 
+                Category: 'Source'
+                Owner: 'AWS'
+                Provider: 'CodeStarSourceConnection'
+                Version: '1'
+              OutputArtifacts: 
+                - Name: 'SourceArtifact'
+              Configuration: 
+                ConnectionArn: !GetAtt GitHubConnection.ConnectionArn
+                FullRepositoryId: !Sub '${GitHubOwner}/${RepositoryName}'
+                BranchName: !Ref Branch
+              RunOrder: 1
+        - Name: 'Build'
+          Actions: 
+            - Name: 'Build'
+              ActionTypeId: 
+                Category: 'Build'
+                Owner: 'AWS'
+                Provider: 'CodeBuild'
+                Version: '1'
+              InputArtifacts: 
+                - Name: 'SourceArtifact'
+              Configuration: 
+                ProjectName: !Ref CodeBuildProject
+              RunOrder: 1
+      Tags:
+        - Key: owner
+          Value: !Ref Owner
+        - Key: product
+          Value: !Ref Product
+
+Outputs:
+  GitHubConnectionArn:
+    Description: 'The ARN of the GitHub connection'
+    Value: !GetAtt GitHubConnection.ConnectionArn

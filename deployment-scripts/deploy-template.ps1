@@ -19,8 +19,9 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
     $awsProfile = "default"
 }
 
-$owner = "warrenne@gmail.com"
-$product = "tha-warrenn-enslin"
+$deploymentConfig = Get-Content ./code-pipeline-stack-deployment.json | ConvertFrom-Json
+$owner = $deploymentConfig.tags.owner
+$product = $deploymentConfig.tags.product
 
 # Function to deploy a new stack
 function DeployNewStack {
