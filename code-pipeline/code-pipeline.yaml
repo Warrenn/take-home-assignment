@@ -99,11 +99,12 @@ Resources:
           PolicyDocument: 
             Version: '2012-10-17'
             Statement: 
-              - Effect: 'Allow'
+              - Sid: 'useConnection'
+                Effect: 'Allow'
                 Action: 
                   - 'codestar-connections:UseConnection'
                   - 'codestar-connections:GetConnection'
-                Resource: !GetAtt GitHubConnection.ConnectionArn      
+                Resource: !GetAtt GitHubConnection.ConnectionArn 
         - PolicyName: CodeStarConnections
           PolicyDocument:
             Version: "2012-10-17"
@@ -130,6 +131,10 @@ Resources:
                 - "iam:PutRolePolicy"
                 - "iam:GetRole"
                 - "iam:CreateServiceLinkedRole"
+                - "codestar-connections:ListTagsForResource"
+                - "codestar-connections:TagResource"
+                - "codestar-connections:UntagResource"
+                - "codestar-connections:ListConnections"
               Resource: "*"
 
             - Sid: "PolicyForManagedRules"
