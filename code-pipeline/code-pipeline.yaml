@@ -166,6 +166,9 @@ Resources:
                   - 'cloudformation:CreateStack'
                   - 'cloudformation:DeleteStack'
                   - 'cloudformation:ListStacks'
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
                 Resource: '*'
         - PolicyName: 'useConnection'
           PolicyDocument: 
