@@ -271,13 +271,6 @@ Resources:
       ArtifactStore: 
         Location: !Ref ArtifactStoreBucket
         Type: 'S3'
-      Triggers:
-        - ProviderType: 'CodeStarSourceConnection'
-          GitConfiguration:
-               SourceActionName: 'Source'
-               PullRequest:
-                    - Branches: 
-                      - !Ref Branch
       Stages: 
         - Name: 'Source'
           Actions: 
