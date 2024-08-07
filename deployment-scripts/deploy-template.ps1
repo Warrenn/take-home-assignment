@@ -94,7 +94,7 @@ if ($status -eq "NotFoundException" -or [System.String]::IsNullOrEmpty($status))
     # Stack does not exist, deploy new stack
     DeployNewStack
 }
-elseif ($status -eq "CREATE_FAILED" -or $status -eq "ROLLBACK_FAILED" -or $status -eq "ROLLBACK_COMPLETE" -or $status -eq "DELETE_FAILED" -or $status -eq "UPDATE_ROLLBACK_FAILED" -or $status -eq "UPDATE_FAILED") {
+elseif ($status -eq "CREATE_FAILED" -or $status -eq "ROLLBACK_FAILED" -or $status -eq "ROLLBACK_COMPLETE" -or $status -eq "DELETE_FAILED" -or $status -eq "UPDATE_ROLLBACK_FAILED") {
     # Stack is in error state, delete and redeploy
     DeleteStack
     Start-Sleep -Seconds 30 # Wait for stack to be deleted

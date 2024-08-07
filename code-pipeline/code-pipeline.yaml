@@ -80,7 +80,79 @@ Resources:
       ResourceName: !Ref AWS::StackName
       RoleArn: !GetAtt SyncRole.Arn
       SyncType: "CFN_STACK_SYNC"
-  
+
+  CloudFormationManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: 'CloudFormation Managed Policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+
+          - Sid: 'UseConnection'
+            Effect: 'Allow'
+            Action: 
+              - 'codestar-connections:UseConnection'
+              - 'codestar-connections:GetConnection'
+              - 'codestar-connections:UpdateConnection'
+            Resource: !GetAtt GitHubConnection.ConnectionArn
+          
+          - Sid: 'RepositoryLinkAccess'
+            Effect: 'Allow'
+            Action: 
+              - 'codestar-connections:*'
+            Resource: 
+              - !Ref RepositoryLink
+          
+          - Sid: "SyncToCloudFormation"
+            Effect: "Allow"
+            Action:
+              - "cloudformation:CreateChangeSet"
+              - "cloudformation:DeleteChangeSet"
+              - "cloudformation:DescribeChangeSet"
+              - "cloudformation:DescribeStackEvents"
+              - "cloudformation:DescribeStacks"
+              - "cloudformation:ExecuteChangeSet"
+              - "cloudformation:GetTemplate"
+              - "cloudformation:ListChangeSets"
+              - "cloudformation:ListStacks"
+              - "cloudformation:ValidateTemplate"
+              - "cloudformation:UpdateStack"
+              - "iam:UntagRole"
+              - "iam:TagRole"
+              - "iam:CreateRole"
+              - "iam:DeleteRole"
+              - "iam:AttachRolePolicy"
+              - "iam:DetachRolePolicy"
+              - "iam:DeleteRolePolicy"
+              - "iam:PutRolePolicy"
+              - "iam:GetRole"
+              - "iam:CreateServiceLinkedRole"
+              - "codestar-connections:ListTagsForResource"
+              - "codestar-connections:TagResource"
+              - "codestar-connections:UntagResource"
+              - "codestar-connections:ListConnections"
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: "*"
+
+          - Sid: "PolicyForManagedRules"
+            Effect: "Allow"
+            Action:
+              - "events:PutRule"
+              - "events:PutTargets"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                events:ManagedBy:
+                  - "cloudformation.sync.codeconnections.amazonaws.com"
+
+          - Sid: "PolicyForDescribingRule"
+            Effect: "Allow"
+            Action: "events:DescribeRule"
+            Resource: "*"
+
   SyncRole:
     Type: AWS::IAM::Role
     Properties:
@@ -95,63 +167,17 @@ Resources:
               - sts:AssumeRole
       Path: /
       Policies:
-        - PolicyName: 'useConnection'
-          PolicyDocument: 
-            Version: '2012-10-17'
-            Statement: 
-              - Sid: 'useConnection'
-                Effect: 'Allow'
-                Action: 
-                  - 'codestar-connections:UseConnection'
-                  - 'codestar-connections:GetConnection'
-                Resource: !GetAtt GitHubConnection.ConnectionArn 
-        - PolicyName: CodeStarConnections
+        - PolicyName: 'CodePipelineAccess'
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
-            - Sid: "SyncToCloudFormation"
-              Effect: "Allow"
-              Action:
-                - "cloudformation:CreateChangeSet"
-                - "cloudformation:DeleteChangeSet"
-                - "cloudformation:DescribeChangeSet"
-                - "cloudformation:DescribeStackEvents"
-                - "cloudformation:DescribeStacks"
-                - "cloudformation:ExecuteChangeSet"
-                - "cloudformation:GetTemplate"
-                - "cloudformation:ListChangeSets"
-                - "cloudformation:ListStacks"
-                - "cloudformation:ValidateTemplate"
-                - "iam:UntagRole"
-                - "iam:TagRole"
-                - "iam:CreateRole"
-                - "iam:DeleteRole"
-                - "iam:AttachRolePolicy"
-                - "iam:DetachRolePolicy"
-                - "iam:PutRolePolicy"
-                - "iam:GetRole"
-                - "iam:CreateServiceLinkedRole"
-                - "codestar-connections:ListTagsForResource"
-                - "codestar-connections:TagResource"
-                - "codestar-connections:UntagResource"
-                - "codestar-connections:ListConnections"
-              Resource: "*"
-
-            - Sid: "PolicyForManagedRules"
-              Effect: "Allow"
-              Action:
-                - "events:PutRule"
-                - "events:PutTargets"
-              Resource: "*"
-              Condition:
-                StringEquals:
-                  events:ManagedBy:
-                    - "cloudformation.sync.codeconnections.amazonaws.com"
-
-            - Sid: "PolicyForDescribingRule"
-              Effect: "Allow"
-              Action: "events:DescribeRule"
-              Resource: "*"
+              - Sid: 'PipelineAccess'
+                Effect: 'Allow'
+                Action: 
+                  - 'codepipeline:*'
+                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${CodePipeline}'
+      ManagedPolicyArns:
+        - !Ref CloudFormationManagedPolicy
       Tags:
         - Key: owner
           Value: !Ref Owner
@@ -170,30 +196,8 @@ Resources:
                 - 'codebuild.amazonaws.com'
             Action: 
               - 'sts:AssumeRole'
-      Policies: 
-        - PolicyName: 'CodeBuildPolicy'
-          PolicyDocument: 
-            Version: '2012-10-17'
-            Statement: 
-              - Effect: 'Allow'
-                Action: 
-                  - 'cloudformation:UpdateStack'
-                  - 'cloudformation:DescribeStacks'
-                  - 'cloudformation:CreateStack'
-                  - 'cloudformation:DeleteStack'
-                  - 'cloudformation:ListStacks'
-                  - 'logs:CreateLogGroup'
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource: '*'
-        - PolicyName: 'useConnection'
-          PolicyDocument: 
-            Version: '2012-10-17'
-            Statement: 
-              - Effect: 'Allow'
-                Action: 
-                  - 'codestar-connections:UseConnection'
-                Resource: !GetAtt GitHubConnection.ConnectionArn
+      ManagedPolicyArns:
+        - !Ref CloudFormationManagedPolicy
       Tags:
         - Key: owner
           Value: !Ref Owner
@@ -267,6 +271,13 @@ Resources:
       ArtifactStore: 
         Location: !Ref ArtifactStoreBucket
         Type: 'S3'
+      Triggers:
+        - ProviderType: 'CodeStarSourceConnection'
+          GitConfiguration:
+               SourceActionName: 'Source'
+               PullRequest:
+                    - Branches: 
+                      - !Ref Branch
       Stages: 
         - Name: 'Source'
           Actions: 
@@ -282,6 +293,7 @@ Resources:
                 ConnectionArn: !GetAtt GitHubConnection.ConnectionArn
                 FullRepositoryId: !Sub '${GitHubOwner}/${RepositoryName}'
                 BranchName: !Ref Branch
+                DetectChanges: true
               RunOrder: 1
         - Name: 'Build'
           Actions: 
