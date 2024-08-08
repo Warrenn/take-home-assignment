@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  GitHubOIDCProvider:
+    Type: 'AWS::IAM::OIDCProvider'
+    Properties: 
+      Url: 'https://token.actions.githubusercontent.com'
+      ClientIdList: 
+        - 'sts.amazonaws.com'
+      ThumbprintList: 
+        - 'A031C46782E6E6C662C2C87C76DA9AA62CCABD8E'
+
+  GitHubActionsRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: 'GitHub-Actions-Role-THA-Warrenn-Enslin'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Federated: 
+                !Ref GitHubOIDCProvider
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Condition:
+              StringLike:
+                token.actions.githubusercontent.com:sub: 'repo:DataChefHQ/THA_Warrenn-Enslin:*'
+                token.actions.githubusercontent.com:aud: 'sts.amazonaws.com'
+      ManagedPolicyArns:
+        - !Ref CloudFormationManagedPolicy
+
+  CloudFormationManagedPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: 'CloudFormation Managed Policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          
+          - Sid: "CloudFormation"
+            Effect: "Allow"
+            Action:
+              - "cloudformation:CreateChangeSet"
+              - "cloudformation:DeleteChangeSet"
+              - "cloudformation:DescribeChangeSet"
+              - "cloudformation:DescribeStackEvents"
+              - "cloudformation:DescribeStacks"
+              - "cloudformation:ExecuteChangeSet"
+              - "cloudformation:GetTemplate"
+              - "cloudformation:ListChangeSets"
+              - "cloudformation:ListStacks"
+              - "cloudformation:ValidateTemplate"
+              - "cloudformation:UpdateStack"
+              - "iam:UntagRole"
+              - "iam:TagRole"
+              - "iam:CreateRole"
+              - "iam:DeleteRole"
+              - "iam:AttachRolePolicy"
+              - "iam:DetachRolePolicy"
+              - "iam:DeleteRolePolicy"
+              - "iam:PutRolePolicy"
+              - "iam:DeletePolicy"
+              - "iam:DeletePolicyVersion"
+              - "iam:CreatePolicyVersion"
+              - "iam:CreatePolicy"
+              - "iam:AttachRolePolicy"
+              - "iam:DetachRolePolicy"
+              - "iam:PutRolePolicy"
+              - "iam:GetRole"
+              - "iam:CreateServiceLinkedRole"
+              - "iam:ListPolicyVersions"
+              - "iam:ListPolicies"
+              - "iam:GetPolicyVersion"
+              - "iam:GetPolicy"
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: "*"
+
+Outputs:
+  GitHubConnectionArn:
+    Description: 'The ARN of the GitHub actions role'
+    Value: !GetAtt GitHubActionsRole.Arn

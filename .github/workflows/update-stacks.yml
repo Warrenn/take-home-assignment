@@ -1,0 +1,35 @@
+name: Update all regional stacks
+
+on:
+  push:
+    branches:
+      - main
+env:
+  AWS_DEFAULT_REGION: eu-west-1
+  OWNER: warrenne@gmail.com
+  PRODUCT: tha-warrenn-enslin
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::738349444885:role/GitHub-Actions-Role-THA-Warrenn-Enslin
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        id: configure-aws-credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          role-session-name: GitHubActionsSession
+          aws-region: ${{ env.AWS_DEFAULT_REGION }}
+
+      - name: Update stacks
+        run: |
+          chmod +x ./deployment-scripts/update-stacks.sh
+          ./deployment-scripts/update-stacks.sh
