@@ -2,9 +2,25 @@ param (
     [String]
     $awsProfile = "",
     [String]
-    $region = "eu-west-1"
+    [Parameter(Mandatory = $true)]
+    $region
 )
 
 write-output "Deploying SFTP Server..."
-$scriptsPath = Resolve-Path "$PSScriptRoot\..\..\deployment-scripts"
-& "$scriptsPath\deploy-template.ps1" -awsProfile $awsProfile -region $region -templateFile "$PSScriptRoot/sftp-server.yaml" -stackName "sftp-server"
+
+# get the owner and product tags from the workflow file
+$workflowYamlContent = Get-Content $(Resolve-Path "$PSScriptRoot\..\.github\workflows\update-stacks.yml")
+$owner = $($workflowYamlContent -match "^.*OWNER.*:.*").Split(":")[1].Trim().Trim("""") 
+$product = $($workflowYamlContent -match "^.*PRODUCT.*:.*").Split(":")[1].Trim().Trim("""")
+
+# get the sha512 hash of the template file
+$sftpServerTemplateSha512 = (Get-FileHash -Path "$PSScriptRoot/sftp-server.yaml" -Algorithm SHA512 | Select-Object -ExpandProperty Hash).ToLower()
+
+# using deploy-template.ps1 script to deploy the sftp server stack
+$scriptsPath = Resolve-Path "$PSScriptRoot\..\scripts"
+& "$scriptsPath\deploy-template.ps1" `
+    -awsProfile $awsProfile `
+    -region $region `
+    -templateFile "$PSScriptRoot/sftp-server.yaml" `
+    -stackName "sftp-server" `
+    -tags $([pscustomobject]@{ owner = $owner; product = $product; sha512 = $sftpServerTemplateSha512 })

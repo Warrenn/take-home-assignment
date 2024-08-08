@@ -31,5 +31,5 @@ jobs:
 
       - name: Update stacks
         run: |
-          chmod +x ./deployment-scripts/update-stacks.sh
-          ./deployment-scripts/update-stacks.sh
+          chmod +x ./scripts/update-stacks.sh
+          ./scripts/update-stacks.sh

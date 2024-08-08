@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: "This template creates an S3 bucket for storing files and enabling SFTP access for an agency user."
+
+Parameters:
+  AgencyName:
+    Type: String
+    Description: The name of the agency
+    AllowedPattern: '^[a-zA-Z0-9-]+$'
+
+  PublicKey:
+    Type: String
+    Description: The public key of the agency
+
+Resources:
+  # Define the S3 bucket with Transfer Acceleration and public access settings
+  AgencyS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub '${AWS::StackName}-artifacts'
+      AccelerateConfiguration:
+        AccelerationStatus: 'Enabled'  # Enable Transfer Acceleration
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true  # Block public ACLs
+        IgnorePublicAcls: true  # Ignore public ACLs
+        BlockPublicPolicy: true  # Bl --pock public bucket policies
+        RestrictPublicBuckets: true  # Restrict public bucket policies
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  # Define the SFTP user
+  AgencySFTPUser:
+    Type: 'AWS::Transfer::User'
+    Properties:
+      UserName: !Sub '${AgencyName}'
+      ServerId: !ImportValue sftp-server-id
+      Role: !GetAtt TransferUserRole.Arn
+      HomeDirectoryType: 'LOGICAL'
+      HomeDirectoryMappings:
+        - Entry: '/'
+          Target: !Sub '/${AgencyS3Bucket}'
+      SshPublicKeys:
+        - !Ref PublicKey
+
+  # Define the IAM Role for the SFTP user
+  TransferUserRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'transfer.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Path: '/'
+      RoleName: !Sub 'TransferUserRole-${AgencyName}'
+      Policies:
+        - PolicyName: 'TransferUserPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                  - 's3:GetBucketVersioning'
+                  - 's3:PutObject'
+                  - 's3:RestoreObject'
+                  - 's3:GetObject'
+                  - 's3:GetObjectAcl'
+                  - 's3:DeleteObject'
+                  - 's3:ListBucketMultipartUploads'
+                  - 's3:MultipartUpload'
+                  - 's3:AbortMultipartUpload'
+                  - 's3:ListMultipartUploadParts'
+                  - 's3:GetBucketPolicy'
+                  - 's3:PutBucketPolicy'
+                Resource: 
+                  - !Sub 'arn:aws:s3:::${AgencyS3Bucket}'
+                  - !Sub 'arn:aws:s3:::${AgencyS3Bucket}/*'
+
+Outputs:
+  SFTPUserName:
+    Description: 'The username for SFTP access.'
+    Value: !Ref AgencySFTPUser
+    Export:
+      Name: !Sub '${AgencyName}-sftp-user-name'
+  S3BucketName:
+    Description: 'The name of the S3 bucket where files will be stored.'
+    Value: !Ref AgencyS3Bucket
+    Export:
+      Name: !Sub '${AgencyName}-s3-bucket-name'
+  S3BucketAcceleratedDomain:
+    Description: 'The domain name for the accelerated endpoint of the S3 bucket.'
+    Value: !Sub 'http://${AgencyS3Bucket}.s3-accelerate.amazonaws.com'
+    Export:
+      Name: !Sub '${AgencyName}-s3-bucket-accelerated-domain'

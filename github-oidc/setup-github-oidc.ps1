@@ -11,7 +11,7 @@ $owner = $($workflowYamlContent -match "^.*OWNER.*:.*").Split(":")[1].Trim().Tri
 $product = $($workflowYamlContent -match "^.*PRODUCT.*:.*").Split(":")[1].Trim().Trim("""") 
 
 
-$scriptsPath = Resolve-Path "$PSScriptRoot\..\deployment-scripts"
+$scriptsPath = Resolve-Path "$PSScriptRoot\..\scripts"
 & "$scriptsPath\deploy-template.ps1" `
     -awsProfile $awsProfile `
     -region $region `
