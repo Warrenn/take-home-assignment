@@ -43,7 +43,8 @@ restrictedRegions=(\
     "eu-west-2" \
     "eu-west-3" \
     "us-east-2" \
-    "ca-central-1")
+    "ca-central-1" \
+    "us-west-1")
 
 agencyTemplatePath=$(resolve "$scriptPath/../agency/agency.yaml")
 sftpServerTemplatePath=$(resolve "$scriptPath/../sftp-server/sftp-server.yaml")
