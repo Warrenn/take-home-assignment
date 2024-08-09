@@ -46,12 +46,13 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: !Sub '/aws/events/${AWS::StackName}'
+      LogGroupName: !Sub '/aws/events/${AgencyName}'
       RetentionInDays: 14
 
   EventBridgeRule:
     Type: AWS::Events::Rule
     Properties:
+      Description: !Sub "EventBridge rule to trigger an SNS notification when an object is created in the S3 bucket for the agency ${AgencyName}."
       EventPattern: '{"source":["aws.s3"],"detail-type":["Object Created"]}'
       State: ENABLED
       Targets:
@@ -69,7 +70,7 @@ Resources:
       Statistic: Sum
       Dimensions:
           - Name: LogGroupName
-            Value: !Sub '/aws/events/${AWS::StackName}'
+            Value: !Sub '/aws/events/${AgencyName}'
       Period: !If 
         - DailyCondition
         - 86400  # 24 hours in seconds for daily monitoring
