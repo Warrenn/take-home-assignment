@@ -33,6 +33,7 @@ echo "Updating stacks..."
 regions=$(aws ec2 describe-regions --query "Regions[*].RegionName" --output text)
 restrictedRegions=(\
     "ap-south-1" \
+    "ap-northeast-1" \
     "ap-northeast-3" \
     "ap-northeast-2" \
     "ap-southeast-1" \
