@@ -10,7 +10,6 @@ $region = $($workflowYamlContent -match "^.*AWS_DEFAULT_REGION.*:.*").Split(":")
 $owner = $($workflowYamlContent -match "^.*OWNER.*:.*").Split(":")[1].Trim().Trim("""") 
 $product = $($workflowYamlContent -match "^.*PRODUCT.*:.*").Split(":")[1].Trim().Trim("""") 
 
-
 $scriptsPath = Resolve-Path "$PSScriptRoot\..\scripts"
 & "$scriptsPath\deploy-template.ps1" `
     -awsProfile $awsProfile `
