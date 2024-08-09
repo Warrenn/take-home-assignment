@@ -62,9 +62,7 @@ Resources:
   S3BucketActivityAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: >
-        Alarm if there has been no PutObject activity on the S3 bucket for the past
-        ${MonitoringFrequency == "daily" ? "24 hours" : "7 days"}.
+      AlarmDescription: !Sub 'Alarm if there has been no ${MonitoringFrequency} activity on the S3 bucket ${AgencyS3Bucket} for the agency ${AgencyName}.'
       ActionsEnabled: true
       MetricName: IncomingLogEvents
       Namespace: AWS/Logs
