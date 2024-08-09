@@ -46,6 +46,7 @@ if ($sftpExports.Count -eq 0) {
 $workflowYamlContent = Get-Content $(Resolve-Path "$PSScriptRoot\..\.github\workflows\update-stacks.yml")
 $owner = $($workflowYamlContent -match "^.*OWNER.*:.*").Split(":")[1].Trim().Trim("""") 
 $product = $($workflowYamlContent -match "^.*PRODUCT.*:.*").Split(":")[1].Trim().Trim("""")
+$passPhrase = [guid]::NewGuid().ToString()
 
 # using aws cli parameter store to check if the sftp user has a public key
 $sftpPublicCertificate = $(aws ssm get-parameter `
@@ -69,7 +70,9 @@ if ([string]::IsNullOrEmpty($sftpPublicCertificate)) {
         Remove-Item -Path "$agencyName-sftp-key"
     }
 
-    ssh-keygen -t rsa -b 2048 -f "$agencyName-sftp-key"  -N '""'
+
+    ssh-keygen -t rsa -b 2048 -f "$agencyName-sftp-key"  -N "$passPhrase"
+
     $sftpPublicCertificate = Get-Content "$agencyName-sftp-key.pub" -Encoding ascii
     $sftpPrivateCertificate = Get-Content "$agencyName-sftp-key" -Encoding ascii
 
@@ -90,7 +93,15 @@ if ([string]::IsNullOrEmpty($sftpPublicCertificate)) {
         --overwrite `
         --region $region `
         --profile $awsProfile
-    
+
+    aws ssm put-parameter `
+        --name "/$product/sftp-pass-phrase/$agencyName" `
+        --type "SecureString" `
+        --value "$($passPhrase)" `
+        --overwrite `
+        --region $region `
+        --profile $awsProfile
+
     aws ssm add-tags-to-resource `
         --resource-type "Parameter" `
         --resource-id "/$product/sftp-private-key/$agencyName" `
@@ -103,10 +114,39 @@ if ([string]::IsNullOrEmpty($sftpPublicCertificate)) {
         --resource-id "/$product/sftp-public-key/$agencyName" `
         --tags $tagsString `
         --region $region `
-        --profile $awsProfile    
+        --profile $awsProfile
+    
+    aws ssm add-tags-to-resource `
+        --resource-type "Parameter" `
+        --resource-id "/$product/sftp-pass-phrase/$agencyName" `
+        --tags $tagsString `
+        --region $region `
+        --profile $awsProfile
+}
+else {
+    # read the private key from ssm
+    $sftpPrivateCertificate = $(aws ssm get-parameter `
+            --name "/$product/sftp-private-key/$agencyName" `
+            --with-decryption `
+            --region $region `
+            --profile $awsProfile `
+            --query "Parameter.Value" `
+            --output text)
+    
+    # read the pass phrase from ssm
+    $passPhrase = $(aws ssm get-parameter `
+            --name "/$product/sftp-pass-phrase/$agencyName" `
+            --with-decryption `
+            --region $region `
+            --profile $awsProfile `
+            --query "Parameter.Value" `
+            --output text)
 
-    # Remove-Item -Path "$agencyName-public-key.pem"
-    # Remove-Item -Path "$agencyName-public-key"
+    # write the content of the public key to a file
+    $sftpPublicCertificate | Out-File "$agencyName-sftp-key.pub" -Encoding ascii
+
+    # write the content of the private key to a file
+    $sftpPrivateCertificate | Out-File "$agencyName-sftp-key" -Encoding ascii
 }
 
 
@@ -124,3 +164,8 @@ $scriptsPath = Resolve-Path "$PSScriptRoot\..\scripts"
     -stackName "$agencyName-agency" `
     -overrides $([pscustomobject]@{ AgencyName = $agencyName; PublicKey = $sftpPublicCertificate }) `
     -tags $([pscustomobject]@{ owner = $owner; product = $product; sha512 = $agencyTemplateSha512; agency = $agencyName })
+
+write-output "Onboarding agency $agencyName complete..."
+write-output "Agency $agencyName public key file: $agencyName-sftp-key.pub"
+write-output "Agency $agencyName private key file: $agencyName-sftp-key"
+write-output "Agency $agencyName pass phrase: $passPhrase"

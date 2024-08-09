@@ -15,10 +15,9 @@ Resources:
   # Define the S3 bucket with Transfer Acceleration and public access settings
   AgencyS3Bucket:
     Type: 'AWS::S3::Bucket'
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
-      BucketName: !Sub '${AWS::StackName}-artifacts'
       AccelerateConfiguration:
         AccelerationStatus: 'Enabled'  # Enable Transfer Acceleration
       PublicAccessBlockConfiguration:
