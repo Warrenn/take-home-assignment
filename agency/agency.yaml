@@ -74,7 +74,7 @@ Resources:
             Value: !Sub '/aws/events/${AWS::StackName}'
       Period: !If 
         - DailyCondition
-        - 60  # 24 hours in seconds for daily monitoring
+        - 86400  # 24 hours in seconds for daily monitoring
         - 604800 # 7 days in seconds for weekly monitoring
       EvaluationPeriods: 1
       Threshold: 0
