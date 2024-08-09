@@ -93,7 +93,7 @@ for region in $regions; do
         dataOpsEmail=$(echo "$stackDetails" | jq -r '.Parameters[] | select(.ParameterKey == "DataOpsEmail") | .ParameterValue')
 
         # if stack ends with "-agency" compare the sha512 hash of the template with the agency template hash
-        if [[ "$stack" == *"-agency" ]] && [[ $sha512 != $agencyHash || $owner != $OWNER || $product != $PRODUCT ]]; then
+        if [[ "$stack" == *"-agency" ]]; then # && [[ $sha512 != $agencyHash || $owner != $OWNER || $product != $PRODUCT ]]; then
             # update the stack
             echo "Updating stack: $stack in region $region with agency template"
 
@@ -112,7 +112,7 @@ for region in $regions; do
         fi
 
         # if stack ends with "sftp-server" compare the sha512 hash of the template with the sftp server template hash
-        if [[ "$stack" == "sftp-server" ]] && [[ $sha512 != $sftpServerHash || $owner != $OWNER || $product != $PRODUCT || $dataOpsEmail != $DATA_OPS_EMAIL ]]; then
+        if [[ "$stack" == "sftp-server" ]]; then # && [[ $sha512 != $sftpServerHash || $owner != $OWNER || $product != $PRODUCT || $dataOpsEmail != $DATA_OPS_EMAIL ]]; then
             # update the stack
             echo "Updating stack: $stack in region $region with sftp server template"
 

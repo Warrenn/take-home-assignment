@@ -97,6 +97,9 @@ Resources:
               - "events:PutRule"
               - "events:DeleteRule"
               - "events:DescribeRule"
+              - "transfer:*"
+              - "sns:*"
+              - "cloudwatch:*"
             Resource: "*"
 
 Outputs:
