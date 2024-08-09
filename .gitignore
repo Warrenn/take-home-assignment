@@ -23,6 +23,9 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
+*-sftp-key
+*-sftp-key.pub
+
 # Ignore transient lock info files created by terraform apply
 .terraform.tfstate.lock.info
 

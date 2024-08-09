@@ -9,6 +9,7 @@ env:
   OWNER: warrenne@gmail.com
   PRODUCT: tha-warrenn-enslin
   AWS_ROLE_TO_ASSUME: arn:aws:iam::738349444885:role/GitHub-Actions-Role-THA-Warrenn-Enslin
+  DATA_OPS_EMAIL: warrenne@gmail.com
 
 jobs:
   deploy:

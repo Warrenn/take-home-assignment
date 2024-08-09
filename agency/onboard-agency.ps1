@@ -6,7 +6,10 @@ param (
     $region,
     [String]
     [Parameter(Mandatory = $true)]
-    $agencyName
+    $agencyName,
+    [ValidateSet("daily", "weekly")]
+    [String]
+    $monitoringFrequency = "daily"
 )
 
 if ([string]::IsNullOrEmpty($awsProfile)) {
@@ -18,8 +21,8 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
 }
 
 # validate that the agency name is valid
-if ($agencyName -notmatch "^[a-zA-Z0-9-]+$") {
-    throw "Agency name must be alphanumeric and cannot contain hyphens"
+if ($agencyName -notmatch "^[a-zA-Z0-9-]+$" -or $agencyName.Length -gt 100) {
+    throw "Agency name must be only alphanumeric with hyphens and less than 100 characters"
 }
 
 # using cloudformation check if a stack with the name exists in the region
@@ -35,7 +38,6 @@ if ($exportsWithName.Count -gt 0) {
 }
 
 $sftpExports = $($exports | Where-Object { $_.Name -eq "sftp-server-endpoint" })
-
 if ($sftpExports.Count -eq 0) {
     $scriptsPath = Resolve-Path "$PSScriptRoot\..\sftp-server"
     & "$scriptsPath\deploy-sftp-server.ps1" `
@@ -69,7 +71,6 @@ if ([string]::IsNullOrEmpty($sftpPublicCertificate)) {
     if (Test-Path -Path "$agencyName-sftp-key") {
         Remove-Item -Path "$agencyName-sftp-key"
     }
-
 
     ssh-keygen -t rsa -b 2048 -f "$agencyName-sftp-key"  -N "$passPhrase"
 
@@ -149,7 +150,6 @@ else {
     $sftpPrivateCertificate | Out-File "$agencyName-sftp-key" -Encoding ascii
 }
 
-
 write-output "Onboarding agency $agencyName..."
 
 # get the sha512 hash of the template file
@@ -162,8 +162,8 @@ $scriptsPath = Resolve-Path "$PSScriptRoot\..\scripts"
     -region $region `
     -templateFile "$PSScriptRoot/agency.yaml" `
     -stackName "$agencyName-agency" `
-    -overrides $([pscustomobject]@{ AgencyName = $agencyName; PublicKey = $sftpPublicCertificate }) `
-    -tags $([pscustomobject]@{ owner = $owner; product = $product; sha512 = $agencyTemplateSha512; agency = $agencyName })
+    -overrides $([pscustomobject]@{ AgencyName = $agencyName; PublicKey = $sftpPublicCertificate; MonitoringFrequency = $monitoringFrequency }) `
+    -tags $([pscustomobject]@{ owner = $owner; product = $product; sha512 = $agencyTemplateSha512; agency = $agencyName; frequency = $monitoringFrequency })
 
 write-output "Onboarding agency $agencyName complete..."
 write-output "Agency $agencyName public key file: $agencyName-sftp-key.pub"

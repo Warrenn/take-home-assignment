@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "This template creates an S3 bucket for storing files and enabling SFTP access for an agency user."
+Description: "This template creates an S3 bucket for storing files for the specified agency and enables SFTP access for an agency user."
 
 Parameters:
   AgencyName:
@@ -10,25 +10,78 @@ Parameters:
   PublicKey:
     Type: String
     Description: The public key of the agency
+  
+  MonitoringFrequency:
+    Type: String
+    Description: Choose between 'daily' or 'weekly' monitoring frequency
+    AllowedValues:
+      - daily
+      - weekly
+    Default: daily
 
 Resources:
-  # Define the S3 bucket with Transfer Acceleration and public access settings
+  # Define the S3 bucket with Transfer Acceleration and public access settings set to block public access
   AgencyS3Bucket:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
       AccelerateConfiguration:
         AccelerationStatus: 'Enabled'  # Enable Transfer Acceleration
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true  # Block public ACLs
         IgnorePublicAcls: true  # Ignore public ACLs
-        BlockPublicPolicy: true  # Bl --pock public bucket policies
+        BlockPublicPolicy: true  # Block public bucket policies
         RestrictPublicBuckets: true  # Restrict public bucket policies
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
+  
+  S3LogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/aws/events/${AWS::StackName}'
+      RetentionInDays: 14
+
+  EventBridgeRule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern: '{"source":["aws.s3"],"detail-type":["Object Created"]}'
+      State: ENABLED
+      Targets:
+        - Id: !Sub 'Id${AWS::StackName}'
+          Arn: !GetAtt S3LogGroup.Arn
+
+  # The Bucket Activity Alarm will trigger an SNS notification if there has been on activity in the log group for the past 24 hours or 7 days, depending on the monitoring frequency.
+  S3BucketActivityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: >
+        Alarm if there has been no PutObject activity on the S3 bucket for the past
+        ${MonitoringFrequency == "daily" ? "24 hours" : "7 days"}.
+      ActionsEnabled: true
+      MetricName: IncomingLogEvents
+      Namespace: AWS/Logs
+      Statistic: Sum
+      Dimensions:
+          - Name: LogGroupName
+            Value: !Sub '/aws/events/${AWS::StackName}'
+      Period: !If 
+        - DailyCondition
+        - 60  # 24 hours in seconds for daily monitoring
+        - 604800 # 7 days in seconds for weekly monitoring
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: LessThanOrEqualToThreshold
+      TreatMissingData: breaching
+      AlarmActions: 
+         - !ImportValue data-ops-sns-topic-arn
 
   # Define the SFTP user
   AgencySFTPUser:
@@ -81,6 +134,9 @@ Resources:
                 Resource: 
                   - !Sub 'arn:aws:s3:::${AgencyS3Bucket}'
                   - !Sub 'arn:aws:s3:::${AgencyS3Bucket}/*'
+
+Conditions:
+  DailyCondition: !Equals [!Ref MonitoringFrequency, daily]
 
 Outputs:
   SFTPUserName:

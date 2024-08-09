@@ -1,8 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "This template creates an SFTP server in the specific region for transferring files."
 
-Resources:
+# parameter to specify the email address for DataOps notifications with valid email format
+Parameters:
+  DataOpsEmail:
+    Type: String
+    Description: The email address for DataOps notifications
+    AllowedPattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
+Resources:
   SFTPServer:
     Type: 'AWS::Transfer::Server'
     Properties:
@@ -10,37 +16,21 @@ Resources:
       Protocols:
         - 'SFTP'
       IdentityProviderType: 'SERVICE_MANAGED'
-      LoggingRole: !GetAtt LoggingRole.Arn
 
   NotificationTopic:
     Type: 'AWS::SNS::Topic'
     Properties:
-      KmsMasterKeyId: 'alias/aws/sns'
       TopicName: 'sftp-server-logging-topic'
- 
-  LoggingRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Principal:
-              Service: 'transfer.amazonaws.com'
-            Action: 'sts:AssumeRole'
-      Path: '/'
-      RoleName: 'TransferLoggingRole'
-      Policies:
-        - PolicyName: 'TransferLoggingPolicy'
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action:
-                  - 'logs:CreateLogStream'
-                  - 'logs:PutLogEvents'
-                Resource: '*'
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref DataOpsEmail
+
 Outputs:
+  DataOpsEmail:
+    Description: 'The email address for DataOps notifications.'
+    Value: !Ref DataOpsEmail
+    Export:
+      Name: 'data-ops-email'
   SFTPServerEndpoint:
     Description: 'The endpoint of the SFTP server.'
     Value: !Sub '${SFTPServer.ServerId}.server.transfer.${AWS::Region}.amazonaws.com'
