@@ -38,6 +38,7 @@ restrictedRegions=(\
     "ap-southeast-1" \
     "ap-southeast-2" \
     "eu-north-1" \
+    "eu-west-2" \
     "eu-west-3")
 
 agencyTemplatePath=$(resolve "$scriptPath/../agency/agency.yaml")
