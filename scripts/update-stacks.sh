@@ -31,6 +31,9 @@ echo "Updating stacks..."
 
 # Get all available regions
 regions=$(aws ec2 describe-regions --query "Regions[*].RegionName" --output text)
+restrictedRegions=("ap-south-1" "ap-northeast-3" "ap-northeast-2" "ap-southeast-1" "ap-southeast-2")
+echo "Restricted regions: ${restrictedRegions[1]}"
+exit
 
 agencyTemplatePath=$(resolve "$scriptPath/../agency/agency.yaml")
 sftpServerTemplatePath=$(resolve "$scriptPath/../sftp-server/sftp-server.yaml")
@@ -40,6 +43,11 @@ sftpServerHash=$(compute_sha512 "$sftpServerTemplatePath")
 
 # Loop through each region and update the stack if the sha512 hash does not match
 for region in $regions; do
+    if [[ ${restrictedRegions[@]} =~ $region ]]; then
+        echo "Skipping restricted region: $region"
+        continue
+    fi
+
     echo "Checking stacks in region: $region"
 
     # Get all the stacks in the region that are in the COMPLETE state
@@ -81,9 +89,9 @@ for region in $regions; do
                 --stack-name $stack \
                 --template-body "file://$agencyTemplatePath" \
                 --parameters \
-                    ParameterKey=AgencyName,UsePreviousValue=true \
-                    ParameterKey=PublicKey,UsePreviousValue=true \
-                    ParameterKey=MonitoringFrequency,UsePreviousValue=true \
+                ParameterKey=AgencyName,UsePreviousValue=true \
+                ParameterKey=PublicKey,UsePreviousValue=true \
+                ParameterKey=MonitoringFrequency,UsePreviousValue=true \
                 --region $region \
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"},{"Key":"sha512","Value":"'$agencyHash'"}]' \
                 --capabilities CAPABILITY_NAMED_IAM
