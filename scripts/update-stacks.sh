@@ -38,6 +38,7 @@ restrictedRegions=(\
     "ap-northeast-2" \
     "ap-southeast-1" \
     "ap-southeast-2" \
+    "sa-east-1" \
     "eu-north-1" \
     "eu-west-2" \
     "eu-west-3" \
