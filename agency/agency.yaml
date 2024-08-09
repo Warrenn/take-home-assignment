@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: "This template creates an S3 bucket for storing files for the specified agency and enables SFTP access for an agency user."
 
 Parameters:
+  # The name of the agency
   AgencyName:
     Type: String
     Description: The name of the agency
