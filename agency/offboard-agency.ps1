@@ -60,8 +60,7 @@ if ($s3Objects.Count -gt 0) {
 
     write-output "Deleting files in $agencyBucketName bucket..."
     # delete the s3 bucket and all objects using the force option
-    aws s3 rb `
-        --bucket s3://$agencyBucketName `
+    aws s3 rb s3://$agencyBucketName `
         --force `
         --region $region `
         --profile $awsProfile
@@ -74,6 +73,7 @@ $product = $($workflowYamlContent -match "^.*PRODUCT.*:.*").Split(":")[1].Trim()
 # get a list of all the parameters in the region
 $parameters = [string]::Join("", $(aws ssm describe-parameters `
             --query "Parameters[*]" `
+            --region $region `
             --profile $awsProfile `
             --output json)) | ConvertFrom-Json
 
@@ -114,13 +114,15 @@ aws cloudformation delete-stack `
     --region $region `
     --profile $awsProfile
 
+Start-Sleep -Seconds 30 # Wait for stack to be deleted
+
 # check if there are any agency stacks in the region in COMPLETE state
 $stacks = [string]::Join("", $(aws cloudformation list-stacks `
             --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
             --region $region `
             --query "StackSummaries[*].StackName" `
             --profile $awsProfile `
-            --output text)) | ConvertFrom-Json
+            --output json)) | ConvertFrom-Json
         
 $agencyStacks = $($stacks | Where-Object { $_ -like "*-agency" })
 if ($agencyStacks.Count -eq 0) {
