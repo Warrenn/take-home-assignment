@@ -8,20 +8,22 @@ Parameters:
     Description: The name of the agency
     AllowedPattern: '^[a-zA-Z0-9-]+$'
 
+  # The public key of the agency for SFTP access
   PublicKey:
     Type: String
-    Description: The public key of the agency
+    Description: The public key of the agency for SFTP access
   
+  # The monitoring frequency for the S3 bucket
   MonitoringFrequency:
     Type: String
-    Description: Choose between 'daily' or 'weekly' monitoring frequency
+    Description: Choose between 'daily' or 'weekly' monitoring frequency for the S3 bucket
     AllowedValues:
       - daily
       - weekly
     Default: daily
 
 Resources:
-  # Define the S3 bucket with Transfer Acceleration and public access settings set to block public access
+  # Define the S3 bucket with Transfer Acceleration and public access settings set to block any public access
   AgencyS3Bucket:
     Type: 'AWS::S3::Bucket'
     DeletionPolicy: Delete
@@ -42,6 +44,7 @@ Resources:
           - ServerSideEncryptionByDefault:
               SSEAlgorithm: AES256
   
+  # Create a log group for the S3 bucket for notifications
   S3LogGroup:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
@@ -50,17 +53,18 @@ Resources:
       LogGroupName: !Sub '/aws/events/${AgencyName}'
       RetentionInDays: 14
 
+  # Create an EventBridge rule to record and log an entry in a log group when an object is created in the S3 bucket for the agency
   EventBridgeRule:
     Type: AWS::Events::Rule
     Properties:
-      Description: !Sub "EventBridge rule to trigger an SNS notification when an object is created in the S3 bucket for the agency ${AgencyName}."
+      Description: !Sub "EventBridge rule to record and log an entry in a log group ${S3LogGroup} when an object is created in the S3 bucket for the agency ${AgencyName}."
       EventPattern: '{"source":["aws.s3"],"detail-type":["Object Created"]}'
       State: ENABLED
       Targets:
         - Id: !Sub 'Id${AWS::StackName}'
           Arn: !GetAtt S3LogGroup.Arn
 
-  # The Bucket Activity Alarm will trigger an SNS notification if there has been on activity in the log group for the past 24 hours or 7 days, depending on the monitoring frequency.
+  # The Bucket Activity Alarm will trigger an SNS notification if there has been no activity in the log group for the past 24 hours or 7 days, depending on the monitoring frequency.
   S3BucketActivityAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:

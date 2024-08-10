@@ -2,6 +2,7 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: "This template creates an OIDC provider for GitHub Actions."
 
 Resources:
+  # Create an OIDC provider for GitHub Actions
   GitHubOIDCProvider:
     Type: "AWS::IAM::OIDCProvider"
     Properties: 
@@ -11,6 +12,7 @@ Resources:
       ThumbprintList: 
         - "A031C46782E6E6C662C2C87C76DA9AA62CCABD8E"
 
+  # Create a role for GitHub Actions
   GitHubActionsRole:
     Type: "AWS::IAM::Role"
     Properties:
@@ -30,6 +32,7 @@ Resources:
       ManagedPolicyArns:
         - !Ref CloudFormationManagedPolicy
 
+  # Create a managed policy for CloudFormation
   CloudFormationManagedPolicy:
     Type: "AWS::IAM::ManagedPolicy"
     Properties:

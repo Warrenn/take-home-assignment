@@ -1,14 +1,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: "This template creates an SFTP server in the specific region for transferring files."
 
-# parameter to specify the email address for DataOps notifications with valid email format
 Parameters:
+  # parameter to specify the email address for DataOps notifications with valid email format
   DataOpsEmail:
     Type: String
     Description: The email address for DataOps notifications
     AllowedPattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 
 Resources:
+  # Create an SFTP server
   SFTPServer:
     Type: 'AWS::Transfer::Server'
     Properties:
@@ -17,6 +18,7 @@ Resources:
         - 'SFTP'
       IdentityProviderType: 'SERVICE_MANAGED'
 
+  # Create a SNS topic for notifications
   NotificationTopic:
     Type: 'AWS::SNS::Topic'
     Properties:
