@@ -1,12 +1,15 @@
 #!/bin/bash
 
-# Function to resolve a path
+# exit immediately if a command exits with a non-zero status
+set -e
+
+# function to resolve a path
 resolve() {
     cd "$(dirname "$1")"
     echo "$(pwd -P)/$(basename "$1")"
 }
 
-# Get the absolute path of the script
+# get the absolute path of the script
 scriptPath=$(
     cd "$(dirname "$0")"
     pwd -P
@@ -14,9 +17,9 @@ scriptPath=$(
 
 echo "Updating stacks..."
 
-# Get all available regions
+# get all available regions
 regions=$(aws ec2 describe-regions --query "Regions[*].RegionName" --output text)
-# Define restricted regions
+# define restricted regions
 restrictedRegions=(\
     "ap-south-1" \
     "ap-northeast-1" \
@@ -36,9 +39,9 @@ restrictedRegions=(\
 agencyTemplatePath=$(resolve "$scriptPath/../agency/agency.yaml")
 sftpServerTemplatePath=$(resolve "$scriptPath/../sftp-server/sftp-server.yaml")
 
-# Loop through each region and update the stack if a stack is an agency stack or a sftp server stack
+# loop through each region and update the stack if a stack is an agency stack or a sftp server stack
 for region in $regions; do
-    # Skip if the region is restricted
+    # skip if the region is restricted
     if [[ ${restrictedRegions[@]} =~ $region ]]; then
         echo "Skipping restricted region: $region"
         continue
@@ -46,19 +49,22 @@ for region in $regions; do
 
     echo "Checking stacks in region: $region"
 
-    # Get all the stacks in the region that are in the COMPLETE state
+    # get all the stacks in the region that are in the COMPLETE state
     stacks=$(aws cloudformation list-stacks \
         --stack-status-filter UPDATE_COMPLETE CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE \
         --region "$region" \
         --query "StackSummaries[*].StackName" \
         --output text)
 
-    # Loop through each stack and update if necessary
+    # loop through each stack and update if necessary
     for stack in $stacks; do
         # if stack name ends with "-agency" it is an agency stack
         if [[ "$stack" == *"-agency" ]]; then
             # update the agency stack
             echo "Updating agency stack: $stack in region $region with agency template"
+
+            # set +e to ignore validation errors
+            set +e
 
             error=$(aws cloudformation update-stack \
                 --stack-name $stack \
@@ -71,13 +77,29 @@ for region in $regions; do
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
                 --capabilities CAPABILITY_NAMED_IAM 2>&1 1>/dev/null)
 
-            continue
+            errCode=$?
+            
+            # set -e to exit on other errors
+            set -e
+
+            # if there is no error continue to the next stack
+            [[ $errCode -eq 0 ]] && continue
+            
+            # if there is a validation error continue to the next stack
+            [[ $error =~ ".*\(ValidationError\).*" ]] && continue
+            
+            # otherwise exit with the error code
+            echo "got error: $error"
+            exit $errCode
         fi
 
         # if stack name is "sftp-server" it is an sftp server stack
         if [[ "$stack" == "sftp-server" ]]; then
             # update the stack
             echo "Updating sftp server stack: $stack in region $region with sftp server template"
+
+            # set +e to ignore validation errors
+            set +e
 
             error=$(aws cloudformation update-stack \
                 --stack-name $stack \
@@ -87,7 +109,20 @@ for region in $regions; do
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
                 --capabilities CAPABILITY_NAMED_IAM 2>&1 1>/dev/null)
 
+            errCode=$?
+            
+            # set -e to exit on other errors
+            set -e
+
+            # if there is no error continue to the next stack
+            [[ $errCode -eq 0 ]] && continue
+            
+            # if there is a validation error continue to the next stack
+            [[ $error =~ ".*\(ValidationError\).*" ]] && continue
+            
+            # otherwise exit with the error code
             echo "got error: $error"
+            exit $errCode
         fi
     done
 done
