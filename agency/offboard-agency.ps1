@@ -21,6 +21,7 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
 $stacks = [string]::Join("", $(aws cloudformation list-stacks `
             --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
             --region $region `
+            --profile $awsProfile `
             --query "StackSummaries[*].StackName" `
             --output json)) | ConvertFrom-Json
 
@@ -47,6 +48,7 @@ if ([string]::IsNullOrEmpty($agencyBucketName)) {
 # using cloudformation check if there are any objects in the agency bucket
 $s3Objects = [string]::Join("", $(aws s3api list-objects `
             --bucket $agencyBucketName `
+            --profile $awsProfile `
             --query "Contents[*]" `
             --output json)) | ConvertFrom-Json
 
@@ -72,6 +74,7 @@ $product = $($workflowYamlContent -match "^.*PRODUCT.*:.*").Split(":")[1].Trim()
 # get a list of all the parameters in the region
 $parameters = [string]::Join("", $(aws ssm describe-parameters `
             --query "Parameters[*]" `
+            --profile $awsProfile `
             --output json)) | ConvertFrom-Json
 
 # check if the sftp public key parameter exists in the region if so delete it
@@ -116,6 +119,7 @@ $stacks = [string]::Join("", $(aws cloudformation list-stacks `
             --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
             --region $region `
             --query "StackSummaries[*].StackName" `
+            --profile $awsProfile `
             --output text)) | ConvertFrom-Json
         
 $agencyStacks = $($stacks | Where-Object { $_ -like "*-agency" })
