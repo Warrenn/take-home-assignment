@@ -48,7 +48,7 @@ for region in $regions; do
 
     # Get all the stacks in the region that are in the COMPLETE state
     stacks=$(aws cloudformation list-stacks \
-        --stack-status-filter UPDATE_COMPLETE CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE DELETE_FAILED \
+        --stack-status-filter UPDATE_COMPLETE CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_ROLLBACK_COMPLETE \
         --region "$region" \
         --query "StackSummaries[*].StackName" \
         --output text)
@@ -70,6 +70,7 @@ for region in $regions; do
                 --region $region \
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
                 --capabilities CAPABILITY_NAMED_IAM
+            echo $?
 
             continue
         fi
