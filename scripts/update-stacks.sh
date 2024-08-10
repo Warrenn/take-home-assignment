@@ -70,7 +70,6 @@ for region in $regions; do
                 --region $region \
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
                 --capabilities CAPABILITY_NAMED_IAM
-            echo $?
 
             continue
         fi
@@ -87,6 +86,8 @@ for region in $regions; do
                 --parameters ParameterKey=DataOpsEmail,ParameterValue=$DATA_OPS_EMAIL \
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
                 --capabilities CAPABILITY_NAMED_IAM
+                
+            echo $?
         fi
     done
 done
