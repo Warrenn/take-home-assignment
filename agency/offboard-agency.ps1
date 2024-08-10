@@ -19,10 +19,10 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
 
 # get the cloudformation stacks in the region
 $stacks = [string]::Join("", $(aws cloudformation list-stacks `
-        --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
-        --region $region `
-        --query "StackSummaries[*].StackName" `
-        --output json)) | ConvertFrom-Json
+            --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
+            --region $region `
+            --query "StackSummaries[*].StackName" `
+            --output json)) | ConvertFrom-Json
 
 # check if the agency stack for the agency name exists in the region if not throw an error
 $stacksWithName = $($stacks | Where-Object { $_ -eq "$agencyName-agency" })
@@ -40,8 +40,8 @@ $exports = [string]::Join("", $(aws cloudformation list-exports `
 # get the name of the s3 bucket for the agency
 $agencyBucketName = $($exports | Where-Object { $_.Name -eq "$agencyName-s3-bucket-name" }).Value
 
-if([string]::IsNullOrEmpty($agencyBucketName)) {
-    throw "Couldn't find bucket $agencyBucketName for $agencyName in region $region"
+if ([string]::IsNullOrEmpty($agencyBucketName)) {
+    throw "Couldn't find S3 bucket for $agencyName in region $region"
 }
 
 # using cloudformation check if there are any objects in the agency bucket
@@ -112,14 +112,20 @@ aws cloudformation delete-stack `
     --profile $awsProfile
 
 # check if there are any agency stacks in the region in COMPLETE state
-$stacks = $(aws cloudformation list-stacks `
-        --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
+$stacks = [string]::Join("", $(aws cloudformation list-stacks `
+            --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
+            --region $region `
+            --query "StackSummaries[*].StackName" `
+            --output text)) | ConvertFrom-Json
+        
+$agencyStacks = $($stacks | Where-Object { $_ -like "*-agency" })
+if ($agencyStacks.Count -eq 0) {
+    # delete the sftp server stack
+    write-output "Deleting sftp server stack..."
+    aws cloudformation delete-stack `
+        --stack-name "sftp-server" `
         --region $region `
-        --query "StackSummaries[*].StackName" `
-        --output text)
-
-if ($agencyStacks -contains "$agencyName-agency") {
-    throw "Agency $agencyName still exists in region $region"
+        --profile $awsProfile
 }
 
 write-output "Agency $agencyName offboarded successfully..."
