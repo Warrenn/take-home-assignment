@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Set -e to exit immediately if any command fails
-set -e
-
 # Function to resolve a path
 resolve() {
     cd "$(dirname "$1")"

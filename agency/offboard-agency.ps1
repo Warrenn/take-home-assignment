@@ -17,27 +17,38 @@ if ([string]::IsNullOrEmpty($awsProfile)) {
     $awsProfile = "default"
 }
 
-# get the cloudformation exports in the region
+# get the cloudformation stacks in the region
+$stacks = [string]::Join("", $(aws cloudformation list-stacks `
+        --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
+        --region $region `
+        --query "StackSummaries[*].StackName" `
+        --output json)) | ConvertFrom-Json
+
+# check if the agency stack for the agency name exists in the region if not throw an error
+$stacksWithName = $($stacks | Where-Object { $_ -eq "$agencyName-agency" })
+if ($stacksWithName.Count -eq 0) {
+    throw "Agency $agencyName does not exist in region $region"
+}
+
+# get the cloudformation exports for the agency stack
 $exports = [string]::Join("", $(aws cloudformation list-exports `
             --profile $awsProfile `
             --region $region `
             --query "Exports[*]" `
             --output json)) | ConvertFrom-Json
 
-# check if the agency stack for the agency name exists in the region if not throw an error
-$exportsWithName = $($exports | Where-Object { $_.Name -eq "$agencyName-sftp-user-name" })
-if ($exportsWithName.Count -eq 0) {
-    throw "Agency $agencyName does not exist in region $region"
+# get the name of the s3 bucket for the agency
+$agencyBucketName = $($exports | Where-Object { $_.Name -eq "$agencyName-s3-bucket-name" }).Value
+
+if([string]::IsNullOrEmpty($agencyBucketName)) {
+    throw "Couldn't find bucket $agencyBucketName for $agencyName in region $region"
 }
 
-# get the name of the s3 bucket for the agency
-$agencyBucketName = $($exportsWithName | Where-Object { $_.Name -eq "$agencyName-s3-bucket-name" }).Value
-
 # using cloudformation check if there are any objects in the agency bucket
-$s3Objects = [string]::Join("", $(aws s3api list-objects-v2 `
-        --bucket $agencyBucketName `
-        --query "Contents[*]" `
-        --output json)) | ConvertFrom-Json
+$s3Objects = [string]::Join("", $(aws s3api list-objects `
+            --bucket $agencyBucketName `
+            --query "Contents[*]" `
+            --output json)) | ConvertFrom-Json
 
 if ($s3Objects.Count -gt 0) {
     $confirmDelete = Read-Host "Thare are files in $agencyBucketName bucket are you sure you want to delete the agency $agencyName in region $region? (y/n)"
@@ -99,5 +110,16 @@ aws cloudformation delete-stack `
     --stack-name "$agencyName-agency" `
     --region $region `
     --profile $awsProfile
+
+# check if there are any agency stacks in the region in COMPLETE state
+$stacks = $(aws cloudformation list-stacks `
+        --stack-status-filter CREATE_COMPLETE ROLLBACK_COMPLETE UPDATE_COMPLETE UPDATE_ROLLBACK_COMPLETE `
+        --region $region `
+        --query "StackSummaries[*].StackName" `
+        --output text)
+
+if ($agencyStacks -contains "$agencyName-agency") {
+    throw "Agency $agencyName still exists in region $region"
+}
 
 write-output "Agency $agencyName offboarded successfully..."
