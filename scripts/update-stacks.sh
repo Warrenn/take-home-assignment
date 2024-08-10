@@ -60,7 +60,7 @@ for region in $regions; do
             # update the agency stack
             echo "Updating agency stack: $stack in region $region with agency template"
 
-            aws cloudformation update-stack \
+            error=$(aws cloudformation update-stack \
                 --stack-name $stack \
                 --template-body "file://$agencyTemplatePath" \
                 --parameters \
@@ -69,7 +69,7 @@ for region in $regions; do
                 ParameterKey=MonitoringFrequency,UsePreviousValue=true \
                 --region $region \
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
-                --capabilities CAPABILITY_NAMED_IAM
+                --capabilities CAPABILITY_NAMED_IAM 2>&1 1>/dev/null)
 
             continue
         fi
@@ -79,15 +79,15 @@ for region in $regions; do
             # update the stack
             echo "Updating sftp server stack: $stack in region $region with sftp server template"
 
-            aws cloudformation update-stack \
+            error=$(aws cloudformation update-stack \
                 --stack-name $stack \
                 --template-body file://$sftpServerTemplatePath \
                 --region $region \
                 --parameters ParameterKey=DataOpsEmail,ParameterValue=$DATA_OPS_EMAIL \
                 --tags '[{"Key":"owner","Value":"'$OWNER'"},{"Key":"product","Value":"'$PRODUCT'"}]' \
-                --capabilities CAPABILITY_NAMED_IAM
-                
-            echo $?
+                --capabilities CAPABILITY_NAMED_IAM 2>&1 1>/dev/null)
+
+            echo "got error: $error"
         fi
     done
 done
